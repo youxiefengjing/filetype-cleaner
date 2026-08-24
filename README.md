@@ -94,4 +94,3 @@ go vet ./...
 go build -buildvcs=false -trimpath -ldflags "-s -w" -o filetype-cleaner.exe .
 ```
 
-构建产物已通过 `.gitignore` 排除；GUI 版本的构建说明和依赖位于 `feature/gui` 分支。
