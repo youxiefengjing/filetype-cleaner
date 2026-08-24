@@ -2,6 +2,18 @@
 
 一个面向大量小文件的 Go 命令行工具，可以按扩展名安全删除文件，也可以把子目录文件展平到扫描根目录。默认处于预览模式，只有明确指定 `--delete` 或 `--apply` 才会修改文件。
 
+## Windows GUI
+
+`filetype-cleaner-gui.exe` 提供 Windows 图形界面，覆盖命令行版本的删除、展平、扩展名筛选、反向模式、路径和内容排除、空文件夹、并发数、日志以及预览功能。
+
+界面始终要求先完成一次扫描预览，设置未变化时才允许点击“执行删除”或“执行展平”。真正执行前仍会显示确认对话框；扫描和处理在后台运行，并显示实时进度和完整结果。
+
+直接双击启动：
+
+```powershell
+.\filetype-cleaner-gui.exe
+```
+
 ## 快速使用
 
 先预览 `.c` 和 `.h` 文件：
@@ -197,4 +209,11 @@ SSD 可以从默认的 4 个 worker 开始测试。机械硬盘通常建议使�
 ```powershell
 go test ./...
 go build -buildvcs=false -trimpath -ldflags "-s -w" -o filetype-cleaner.exe .
+```
+
+GUI 使用 Fyne v2，需要 CGO 和 C 编译器。在 Windows 上可使用 MinGW-w64：
+
+```powershell
+go test -tags gui ./...
+go build -tags gui -buildvcs=false -trimpath -ldflags "-s -w -H=windowsgui" -o filetype-cleaner-gui.exe .
 ```

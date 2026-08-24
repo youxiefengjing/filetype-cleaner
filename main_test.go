@@ -912,6 +912,97 @@ func TestMoveProgressUsesFileCount(t *testing.T) {
 	}
 }
 
+func TestGUIOptionsBuildPreviewAndExecuteArguments(t *testing.T) {
+	options := guiOptions{
+		root:              `C:\data`,
+		mode:              guiModeFlatten,
+		extensions:        ".txt,.md",
+		exclusions:        "vendor,temp",
+		contentExclusions: "keep",
+		contentMaxMiB:     "64",
+		workers:           "4",
+		preview:           "50",
+		keepPreview:       "20",
+		emptyDirPreview:   "10",
+		logPath:           "flatten.log",
+		noExtension:       true,
+		invert:            true,
+		emptyDirs:         true,
+		ignoreScanErrors:  true,
+	}
+	preview := options.arguments(false)
+	execute := options.arguments(true)
+	for _, wanted := range []string{
+		"--root", `C:\data`, "--ext", ".txt,.md", "--exclude", "vendor,temp",
+		"--exclude-content", "keep", "--content-max-mib", "64", "--workers", "4",
+		"--preview", "50", "--keep-preview", "20", "--empty-dir-preview", "10",
+		"--log", "flatten.log", "--no-ext", "--invert", "--empty-dirs",
+		"--ignore-scan-errors", "--flatten",
+	} {
+		if !containsArgument(preview, wanted) {
+			t.Fatalf("preview missing %q: %#v", wanted, preview)
+		}
+	}
+	if containsArgument(preview, "--apply") || containsArgument(preview, "--yes") {
+		t.Fatalf("preview contains execution flags: %#v", preview)
+	}
+	if !containsArgument(execute, "--apply") || !containsArgument(execute, "--yes") || containsArgument(execute, "--delete") {
+		t.Fatalf("unexpected flatten execute args: %#v", execute)
+	}
+
+	options.mode = guiModeDelete
+	execute = options.arguments(true)
+	if !containsArgument(execute, "--delete") || !containsArgument(execute, "--yes") || containsArgument(execute, "--flatten") || containsArgument(execute, "--apply") {
+		t.Fatalf("unexpected delete execute args: %#v", execute)
+	}
+}
+
+func TestGUIOptionsFingerprintChangesWithSettings(t *testing.T) {
+	options := guiOptions{root: `C:\data`, mode: guiModeDelete, extensions: ".txt"}
+	first := options.fingerprint()
+	options.extensions = ".go"
+	if second := options.fingerprint(); second == first {
+		t.Fatal("fingerprint did not change with settings")
+	}
+}
+
+func TestProgressDisplayReportsStructuredProgress(t *testing.T) {
+	reporter := &testProgressReporter{}
+	display := newProgressDisplay(reporter)
+	display.scan(12, 3, false, true)
+	display.move(2, 4, 1, 1, true)
+	if len(reporter.states) != 2 {
+		t.Fatalf("states=%d, want 2", len(reporter.states))
+	}
+	if got := reporter.states[0]; got.phase != "scan" || got.processed != 12 || got.selected != 3 || !got.done {
+		t.Fatalf("unexpected scan state: %#v", got)
+	}
+	if got := reporter.states[1]; got.phase != "move" || got.processed != 2 || got.total != 4 || got.succeeded != 1 || got.failed != 1 || !got.done {
+		t.Fatalf("unexpected move state: %#v", got)
+	}
+}
+
+type testProgressReporter struct {
+	states []progressState
+}
+
+func (reporter *testProgressReporter) Write(data []byte) (int, error) {
+	return len(data), nil
+}
+
+func (reporter *testProgressReporter) reportProgress(state progressState) {
+	reporter.states = append(reporter.states, state)
+}
+
+func containsArgument(arguments []string, wanted string) bool {
+	for _, argument := range arguments {
+		if argument == wanted {
+			return true
+		}
+	}
+	return false
+}
+
 func TestRejectsVolumeRootDeletion(t *testing.T) {
 	volumeRoot := filepath.VolumeName(t.TempDir()) + string(filepath.Separator)
 	if filepath.VolumeName(volumeRoot) == "" {

@@ -18,7 +18,7 @@ import (
 	"unicode/utf16"
 )
 
-const version = "1.8.1"
+const version = "1.9.0"
 
 const flattenSeparator = "__"
 
@@ -168,15 +168,27 @@ type progressDisplay struct {
 	out         io.Writer
 	interactive bool
 	lastUpdate  time.Time
+	reporter    progressReporter
+	lastReport  time.Time
+}
+
+type progressState struct {
+	phase     string
+	processed int64
+	total     int64
+	selected  int64
+	succeeded int64
+	failed    int64
+	done      bool
+}
+
+type progressReporter interface {
+	reportProgress(progressState)
 }
 
 type contentFilter struct {
 	keywords [][]byte
 	maxBytes int64
-}
-
-func main() {
-	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 }
 
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
@@ -1659,6 +1671,9 @@ func classifyFileInfo(info fs.FileInfo) (isLinkLike, supported bool) {
 
 func newProgressDisplay(out io.Writer) *progressDisplay {
 	display := &progressDisplay{out: out}
+	if reporter, ok := out.(progressReporter); ok {
+		display.reporter = reporter
+	}
 	if file, ok := out.(*os.File); ok {
 		if info, err := file.Stat(); err == nil {
 			display.interactive = info.Mode()&os.ModeCharDevice != 0
@@ -1668,6 +1683,7 @@ func newProgressDisplay(out io.Writer) *progressDisplay {
 }
 
 func (display *progressDisplay) scan(visited, selected int64, invert, done bool) {
+	display.report(progressState{phase: "scan", processed: visited, selected: selected, done: done})
 	if !display.shouldRender(done) {
 		return
 	}
@@ -1695,6 +1711,7 @@ func (display *progressDisplay) scan(visited, selected int64, invert, done bool)
 }
 
 func (display *progressDisplay) delete(processed, total, deleted, failed int64, done bool) {
+	display.report(progressState{phase: "delete", processed: processed, total: total, succeeded: deleted, failed: failed, done: done})
 	if !display.shouldRender(done) {
 		return
 	}
@@ -1713,6 +1730,7 @@ func (display *progressDisplay) delete(processed, total, deleted, failed int64, 
 }
 
 func (display *progressDisplay) move(processed, total, moved, failed int64, done bool) {
+	display.report(progressState{phase: "move", processed: processed, total: total, succeeded: moved, failed: failed, done: done})
 	if !display.shouldRender(done) {
 		return
 	}
@@ -1731,6 +1749,7 @@ func (display *progressDisplay) move(processed, total, moved, failed int64, done
 }
 
 func (display *progressDisplay) directories(processed, total, deleted, failed int64, done bool) {
+	display.report(progressState{phase: "directories", processed: processed, total: total, succeeded: deleted, failed: failed, done: done})
 	if !display.shouldRender(done) {
 		return
 	}
@@ -1746,6 +1765,17 @@ func (display *progressDisplay) directories(processed, total, deleted, failed in
 	}
 	bar := strings.Repeat("=", filled) + strings.Repeat("-", width-filled)
 	display.render(fmt.Sprintf("空目录 [%s] %3d%% | %s/%s | 删除 %s | 失败 %s", bar, percent, formatInteger(processed), formatInteger(total), formatInteger(deleted), formatInteger(failed)), done)
+}
+
+func (display *progressDisplay) report(state progressState) {
+	if display.reporter == nil {
+		return
+	}
+	if !state.done && time.Since(display.lastReport) < 100*time.Millisecond {
+		return
+	}
+	display.lastReport = time.Now()
+	display.reporter.reportProgress(state)
 }
 
 func (display *progressDisplay) shouldRender(force bool) bool {
