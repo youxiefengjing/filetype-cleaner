@@ -4,7 +4,7 @@
 
 它解决两类问题：按规则清理不需要的文件，以及把分散在多级目录中的文件集中到根目录。默认只做扫描和预览，明确确认后才会修改文件。
 
-Windows GUI 版本位于 [`feature/gui`](https://github.com/youxiefengjing/filetype-cleaner/tree/feature/gui)，也可直接从 [v1.9.0 Release](https://github.com/youxiefengjing/filetype-cleaner/releases/tag/v1.9.0) 下载。主分支保持 CLI 依赖和构建流程简单。
+
 
 ## 能力概览
 
