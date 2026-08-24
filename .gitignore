@@ -1,0 +1,12 @@
+# Local build artifacts
+/filetype-cleaner
+/filetype-cleaner.exe
+*.exe~
+
+# Runtime output
+*.log
+coverage.out
+
+# OS metadata
+.DS_Store
+Thumbs.db
