@@ -65,7 +65,7 @@ a__b__file (3).txt
 
 GUI 可执行文件为 `filetype-cleaner-gui.exe`。它使用与 CLI 相同的扫描和处理逻辑，提供目录选择、规则输入、模式切换、预览、确认对话框、后台执行和结果输出。
 
-界面约束是“先预览，再执行”：只要设置发生变化，执行按钮就会重新锁定。GUI 版本构建于 `feature/gui` 分支。
+只要设置发生变化，执行按钮就会重新锁定。
 
 ## 核心参数
 
@@ -100,7 +100,7 @@ go vet ./...
 go build -buildvcs=false -trimpath -ldflags "-s -w" -o filetype-cleaner.exe .
 ```
 
-GUI 使用 Fyne v2，需要 CGO 和 C 编译器（Windows 可使用 MinGW-w64）：
+GUI 使用 Fyne v2，需要 CGO 和 C 编译器：
 
 ```powershell
 go test -tags gui ./...
