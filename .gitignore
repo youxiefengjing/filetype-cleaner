@@ -1,6 +1,7 @@
 # Local build artifacts
 /filetype-cleaner
 /filetype-cleaner.exe
+/filetype-cleaner-gui.exe
 *.exe~
 
 # Runtime output
